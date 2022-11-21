@@ -2,3 +2,6 @@ name = "Vision"
 uuid = "9150dba0-62ab-4b8c-b7d2-25a0d6dd685f"
 authors = ["Joshua Niemelä <josh@jniemela.dk>"]
 version = "0.1.0"
+
+[deps]
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
