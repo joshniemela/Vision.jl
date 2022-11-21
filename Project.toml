@@ -1,0 +1,4 @@
+name = "Vision"
+uuid = "9150dba0-62ab-4b8c-b7d2-25a0d6dd685f"
+authors = ["Joshua Niemelä <josh@jniemela.dk>"]
+version = "0.1.0"
