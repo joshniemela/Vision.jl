@@ -1,5 +1,17 @@
 # Vision.jl
-A Julia package for interacting with the [Google Vision API](https://cloud.google.com/vision/).
+A Julia package for easily interacting with the [Google Vision API](https://cloud.google.com/vision/).  
+
+The package currently implements the following features:
+1. `makeRequestBody` - creates a request body for the Google Vision API from either a base 64 encoded image or a URI to an image containing one or more features.
+
+2. `visionFeature` - creates a `VisionFeature` object for use in the request body.
+
+3. `getResponse` - sends a request to the Google Vision API and returns the response.
+
+4. `parseFeatures` - parses the response from the Google Vision API, currently only supports `textAnnotations`
+
+## How to use  
+Export your google API key to `JULIA_VISION_API_KEY` or manually override the URL used by `getResponse`
 
 
 ## Example code snippets
