@@ -48,7 +48,7 @@ end
 """
     makeRequest(featureType::String, maxResults::Int=10)
 
-    Make a dictionary containing the feature type and max results.
+    Create a dictionary containing the feature type and max results.
 
 # Arguments
 - `featureType::String` type of feature to request from the API
@@ -138,27 +138,4 @@ function parseFeatures(responseBody)
     parsedResponse
 end
 
-
-
 end
-
-
-function image2string(image)
-    # Convert image to base64 string
-    # image: image file path
-    # return: base64 string
-    base64encode(open(image, "r"))
-end
-
-#newBody = makeRequestBody(
-#    URI("https://media.npr.org/assets/img/2018/06/01/gettyimages-963767120_wide-7200de8f331eed3cfae99b91fcc95003662a75f6-s1100-c50.jpg"), visionFeature("DOCUMENT_TEXT_DETECTION", 10)
-#)
-#
-using Base64
-newBody = makeRequestBody(
-    image2string("example.png"), visionFeature("DOCUMENT_TEXT_DETECTION", 50)
-)
-
-response = getResponse(newBody)
-
-parseFeatures(response)
