@@ -1,15 +1,13 @@
-#module Vision
-
+module Vision
 using HTTP
 using JSON
-using Base64
 using URIs
-function image2string(image)
-    # Convert image to base64 string
-    # image: image file path
-    # return: base64 string
-    base64encode(open(image, "r"))
-end
+
+export makeRequestBody
+export visionFeature
+export getResponse
+export parseFeatures
+
 
 """
     makeRequestBody(image, features)
@@ -25,7 +23,7 @@ Create the request body for the Google Vision API.
 """
 function makeRequestBody end
 
-function makeRequestBody(imageString::String, features::Vector{Dict{String, Any}})  
+function makeRequestBody(imageString::String, features)  
     Dict("requests" =>
         [
             Dict(
@@ -83,14 +81,14 @@ end
 
 # Arguments
 - `requestBody` JSON request body
-- `URL` URL of the API, defaults to `https://vision.googleapis.com/v1/images:annotate`
+- `URL` URL of the API, defaults to `https://vision.googleapis.com/v1/images:annotate`, this can be changed to use a different API or if it isn't possible to load environment variables.  
 - `headers` headers for the request, defaults to []
 
 # Returns
 - `Dict{String, Any}` response from the API
 """
 function getResponse(requestBody::String,
-    URL::String="https://vision.googleapis.com/v1/images:annotate?key=$(ENV["GOOGLE_VISION_API_KEY"])",
+    URL::String="https://vision.googleapis.com/v1/images:annotate?key=$(ENV["JULIA_VISION_API_KEY"])",
     headers = [])
     # Send request to Google Vision API
     # requestBody: request body
@@ -100,22 +98,67 @@ function getResponse(requestBody::String,
     return JSON.parse(String(response.body))
 end
 
+"""
+    parseFeatures(responseBody)
+
+    Parse the response body from the Google Vision API, returns the dictionary if the method hasn't been implemented. Otherwise return formatted output.
+
+# Arguments
+- `responseBody` response body from the API
+
+# Returns
+- Dictionary containing raw features or formatted output
+"""
 function parseFeatures(responseBody)
+    function getBBox(boundingPoly)
+        vertices = boundingPoly["vertices"]
+        map(x -> Tuple(values(x)), vertices)
+    end
     responses = responseBody["responses"][1]
     parsedResponse = Dict()
     for (key, value) in responses
         if key == "textAnnotations"
-            for annotation in value
-                println(annotation["description"])
+            annotationsDict = Dict("combined" => Dict(), "annotations" => [])
+            # Get combined text since this is different from the other annotations
+            annotationsDict["combined"]["locale"] = value[1]["locale"]
+            annotationsDict["combined"]["text"] = value[1]["description"]
+            annotationsDict["combined"]["boundingPoly"] = getBBox(value[1]["boundingPoly"])
+            for annotation in value[2:end]
+                push!(annotationsDict["annotations"], Dict(
+                    "text" => annotation["description"],
+                    "boundingPoly" => getBBox(annotation["boundingPoly"])
+                ))
             end
-        elseif key == "labelAnnotations"
+            parsedResponse[key] = annotationsDict
+        else
+            @warn "Method not implemented for $key, returning raw response"
+            parsedResponse[key] = value
+        end
     end
+    parsedResponse
 end
 
 
+
+end
+
+
+function image2string(image)
+    # Convert image to base64 string
+    # image: image file path
+    # return: base64 string
+    base64encode(open(image, "r"))
+end
+
+#newBody = makeRequestBody(
+#    URI("https://media.npr.org/assets/img/2018/06/01/gettyimages-963767120_wide-7200de8f331eed3cfae99b91fcc95003662a75f6-s1100-c50.jpg"), visionFeature("DOCUMENT_TEXT_DETECTION", 10)
+#)
+#
+using Base64
 newBody = makeRequestBody(
-    URI("https://media.npr.org/assets/img/2018/06/01/gettyimages-963767120_wide-7200de8f331eed3cfae99b91fcc95003662a75f6-s1100-c50.jpg"), visionFeature("DOCUMENT_TEXT_DETECTION", 10)
+    image2string("example.png"), visionFeature("DOCUMENT_TEXT_DETECTION", 50)
 )
 
 response = getResponse(newBody)
-dictResponse = JSON.parse(String(response.body))
+
+parseFeatures(response)
