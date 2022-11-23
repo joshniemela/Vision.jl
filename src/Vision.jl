@@ -11,28 +11,20 @@ function image2string(image)
     base64encode(open(image, "r"))
 end
 
-
-#function uploadImage(image::String)
-#    doStuff(image)
-#
-#function uploadImage(image::bytes)
-#    uploadImage(bytestream2string(image))
-#
-#function uploadImage(image::Array{UInt8, 3})
-#    uploadImage(image2string(image))
-
 """
     makeRequestBody(image, features)
 
 Create the request body for the Google Vision API.
 
 # Arguments
-- `image::String` base64 encoded image or URI
+- `image` base64 encoded image of type `String` or URI of type `URI`
 - `features::Array{Dict{String, Any}}` list of features to request from the API
 
 # Returns
 - `Dict{String, Any}` request body
 """
+function makeRequestBody end
+
 function makeRequestBody(imageString::String, features::Vector{Dict{String, Any}})  
     Dict("requests" =>
         [
@@ -43,7 +35,8 @@ function makeRequestBody(imageString::String, features::Vector{Dict{String, Any}
         ]
     ) |> JSON.json
 end
-function makeRequestBody(imageURI::URI, features::Vector{Dict{String, Any}})  
+
+function makeRequestBody(imageURI::URI, features)  
     Dict("requests" =>
         [
             Dict(
@@ -54,58 +47,75 @@ function makeRequestBody(imageURI::URI, features::Vector{Dict{String, Any}})
     ) |> JSON.json
 end
 
-function getResponse
+"""
+    makeRequest(featureType::String, maxResults::Int=10)
 
-API_KEY =  try 
-    ENV["JULIA_VISION_API_KEY"]
-catch
-    error("Please set the environment variable JULIA_VISION_API_KEY to your API key")
+    Make a dictionary containing the feature type and max results.
+
+# Arguments
+- `featureType::String` type of feature to request from the API
+- `maxResults::Int=10` maximum number of results to return
+"""
+function visionFeature(featureType::String, maxResults::Int=10)
+    if featureType ∉ [
+        "TEXT_DETECTION",
+        "DOCUMENT_TEXT_DETECTION",
+        "LABEL_DETECTION",
+        "FACE_DETECTION",
+        "LANDMARK_DETECTION",
+        "LOGO_DETECTION",
+        "SAFE_SEARCH_DETECTION",
+        "IMAGE_PROPERTIES",
+        "CROP_HINTS",
+        "WEB_DETECTION",
+        "OBJECT_LOCALIZATION"
+    ]
+        throw(ArgumentError("Invalid feature type, see https://cloud.google.com/vision/docs/features-list for valid feature types"))
+    else
+        Dict("type" => featureType, "maxResults" => maxResults)
+    end
 end
 
-url = "https://vision.googleapis.com/v1/images:annotate?key=$API_KEY"
+"""
+    getResponse(requestBody, URL, headers)
 
-params = Dict("requests" =>
-    [
-        Dict(
-            "image" => Dict("source" => Dict("imageUri" => "https://upload.wikimedia.org/wikipedia/commons/9/9b/Gustav_chocolate.jpg")),
+    Make a request to the Google Vision API and return as a dictionary.
 
-            "features" => [
-                Dict("type" => "WEB_DETECTION", "maxResults" => 10),
-            ]
-        )
-    ]
-)
+# Arguments
+- `requestBody` JSON request body
+- `URL` URL of the API, defaults to `https://vision.googleapis.com/v1/images:annotate`
+- `headers` headers for the request, defaults to []
 
-HTRparams = Dict("requests" =>
-    [
-        Dict(
-            "image" => Dict("content" => image2string("example.png")),
+# Returns
+- `Dict{String, Any}` response from the API
+"""
+function getResponse(requestBody::String,
+    URL::String="https://vision.googleapis.com/v1/images:annotate?key=$(ENV["GOOGLE_VISION_API_KEY"])",
+    headers = [])
+    # Send request to Google Vision API
+    # requestBody: request body
+    # return: response body
+    response = HTTP.post(URL, headers, requestBody)
 
-            "features" => [
-                Dict("type" => "DOCUMENT_TEXT_DETECTION", "maxResults" => 10),
-            ]
-        )
-    ]
-)
-body = JSON.json(HTRparams)
+    return JSON.parse(String(response.body))
+end
 
+function parseFeatures(responseBody)
+    responses = responseBody["responses"][1]
+    parsedResponse = Dict()
+    for (key, value) in responses
+        if key == "textAnnotations"
+            for annotation in value
+                println(annotation["description"])
+            end
+        elseif key == "labelAnnotations"
+    end
+end
 
-headers = []
-#response = HTTP.post(url, headers, body)
 
 newBody = makeRequestBody(
-    image2string("example.png"), 
-    [
-        Dict("type" => "DOCUMENT_TEXT_DETECTION", "maxResults" => 10)
-    ]
+    URI("https://media.npr.org/assets/img/2018/06/01/gettyimages-963767120_wide-7200de8f331eed3cfae99b91fcc95003662a75f6-s1100-c50.jpg"), visionFeature("DOCUMENT_TEXT_DETECTION", 10)
 )
 
-newBody = makeRequestBody(
-    URI("https://upload.wikimedia.org/wikipedia/commons/9/9b/Gustav_chocolate.jpg"), 
-    [
-        Dict("type" => "WEB_DETECTION", "maxResults" => 10)
-    ]
-)
-
-response = HTTP.post(url, headers, newBody)
+response = getResponse(newBody)
 dictResponse = JSON.parse(String(response.body))
