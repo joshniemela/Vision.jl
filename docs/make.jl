@@ -2,7 +2,7 @@ using Documenter
 using Vision
 
 makedocs(
-    sitename = "Vision",
+    sitename = "Vision.jl",
     format = Documenter.HTML(),
     modules = [Vision]
 )
